@@ -161,3 +161,30 @@ def evaluate_retrieval(similarity_matrix, gallery_labels, query_labels):
 
     mAP_per_class = [(i , round(mAP_per_class[i].item(), 4)) for i in range (0, len(mAP_per_class))]
     return mAP, mAP_per_class
+
+
+def NMC_train(train_features_matrix, train_labels):
+
+    unique_classes = torch.unique(train_labels)
+
+    # Inizialize final matrix
+    num_classes = len(unique_classes)
+    feature_size = train_features_matrix.shape[1]
+
+    mean_matrix = torch.zeros((num_classes, feature_size))    
+
+    for i,cls in enumerate(unique_classes):
+
+        # Retrieve only the features of the class cls
+        class_features = train_features_matrix[train_labels==cls]
+
+        mean_matrix[i] = torch.mean(class_features, dim=0)
+    
+    return mean_matrix
+
+
+def NMC_test(mean_matrix, test_feature_matrix):
+
+    similarity_matrix = torch.matmul(test_feature_matrix, mean_matrix.t())
+
+    return torch.argmax(similarity_matrix, dim=1)
