@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 
 def train_loop(model, dataloader, optimizer, criterion, device, adv=False, attack_params_dict=None):
     model.train()
@@ -50,7 +51,38 @@ def eval_loop(model, dataloader, criterion, device):
     accuracy = correct / len(dataloader.dataset)
     return total_loss / len(dataloader.dataset), accuracy
 
-import torch.nn.functional as F
+def test_loop(model, dataloader, device, adv=False, criterion=torch.nn.CrossEntropyLoss(), attack_params_dict=None):
+    
+    result = {
+        'predictions' : [],
+        'labels' : []
+    }
+
+    for images, labels in dataloader:
+        model.eval()
+        model.to(device)
+        images, labels = images.to(device), labels.to(device)
+
+        if adv and attack_params_dict is not None:
+            images = generate_adversarial(
+                model=model,
+                criterion=criterion,
+                images=images,
+                labels=labels,
+                eps=attack_params_dict['eps'],
+                target_class=attack_params_dict['target_class'],
+                num_iterations=attack_params_dict['num_iterations'],
+                device=device
+            )
+
+        with torch.no_grad():
+            output = model(images)
+            predictions = torch.argmax(output, axis=-1)
+
+            result['predictions'].extend(predictions.cpu().numpy())
+            result['labels'].extend(labels.cpu().numpy())
+
+    return result
 
 # Return Max Softmax Probability scores for a given model and dataloader
 def get_msp_scores(model, dataloader, device):
