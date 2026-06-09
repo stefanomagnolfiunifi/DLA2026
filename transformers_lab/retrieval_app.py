@@ -1,25 +1,33 @@
 import gradio as gr
 import torch
-from transformers import AutoProcessor, AutoModel
+from transformers.models.clip.modeling_clip import CLIPModel
+from transformers.models.clip.processing_clip import CLIPProcessor
 from torch.utils.data import DataLoader
 from datasets import load_dataset
 import torch.nn.functional as F
 
 model_id = "openai/clip-vit-base-patch32"
-model = AutoModel.from_pretrained(model_id, dtype=torch.bfloat16)
-processor = AutoProcessor.from_pretrained(model_id)
+model = CLIPModel.from_pretrained(model_id, dtype=torch.bfloat16)
+processor = CLIPProcessor.from_pretrained(model_id)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model.to(device)
 
 dataset = load_dataset("jxie/flickr8k", split="train")
-images = dataset['image']
-#dataloader = DataLoader(dataset=images, batch_size=64, shuffle=False)
+
+def collate_fn(batch):
+    images = [item["image"] for item in batch]
+    
+    input = processor(images=images, return_tensors="pt")
+    return input
+
+dataloader = DataLoader(dataset=dataset, batch_size=64, shuffle=False, collate_fn=collate_fn, num_workers=4)
 
 img_embeddings = []
 with torch.no_grad():
-    for img in images:
-        inputs = processor(images=img, return_tensors="pt").to(device)
+    for inputs in dataloader:
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        
         img_features = model.get_image_features(**inputs)
 
         img_features = F.normalize(img_features, p=2, dim=-1)
@@ -39,7 +47,7 @@ def retrieve_images(text_prompt, top_k):
         
         top_indices = similarities.topk(top_k).indices.tolist()
         
-        results = [images[idx] for idx in top_indices]
+        results = dataset.select(top_indices)["image"]
         
     return results
 
@@ -49,7 +57,9 @@ interface = gr.Interface(
     inputs=[gr.Textbox(lines=1, placeholder="Es. a photo of dogs playing in the snow...", label="Query"), gr.Slider(minimum=1, maximum=25, step=1)],
     outputs=gr.Gallery(columns=5, height="auto"),
     title="A Text-to-image Retrieval System using CLIP on Flickr8k",
-    description="Insert a photo description."
+    description="Insert a photo description.",
+    live=True,
+    flagging_mode="never"
 )
 
 if __name__ == "__main__":
