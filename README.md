@@ -1,7 +1,7 @@
 # DLA2026
 
-This repository contains the practical laboratory assignments for the Deep Learning Application course (DLA 2026). The laboratories selected are 
-- #1 From Pixels to Semantics, 
+This repository contains the practical laboratory assignments for the Deep Learning Application course (DLA 2026). The laboratories selected are: 
+- #1 From Pixels to Semantics
 - #2 The Transformative Transformer
 - #4 OOD Detection and Adversarial Robustness
 
@@ -51,8 +51,8 @@ uv run jupyter notebook
 ```
 
 ### Launching the Gradio Web App
-To start the interactive web interface for the Transformers laboratory, run the `retrieval.py` script using `uv`:
+To start the interactive web interface for the Transformers laboratory, run the `transformers_lab/retrieval_app.py` script using your IDE or `uv`:
 ```bash
-uv run python transformers_lab/retrieval.py
+uv run python transformers_lab/retrieval_app.py
 ```
 Once executed, the terminal will provide a local URL (usually `http://127.0.0.1:7860/`) that you can open in any web browser to interact with the application.
